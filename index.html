@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0e2740" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+<title>TourGuard AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="stripe" aria-hidden="true"></div>
+<div class="wrap">
+
+  <header class="app-top">
+    <div class="brand">Tour<span>Guard</span> AI</div>
+    <span id="status" class="pill">Checking…</span>
+  </header>
+  <div id="banner" class="banner" hidden>Demo mode: no API key is set, so AI replies are placeholders.</div>
+
+  <!-- EXPLORE (first screen) -->
+  <section class="screen" data-screen="explore">
+    <div class="hero">
+      <p class="eyebrow">New in town?</p>
+      <h2>Explore India,<br>state by state</h2>
+      <p>Pick a travel style, browse by what you're into, or tap a state on the Map tab. Places with a pin can go on your route.</p>
+      <svg viewBox="0 0 180 120" aria-hidden="true">
+        <path d="M6 100 C 40 30, 90 110, 130 40 S 170 20, 176 14" fill="none" stroke="#ff9933" stroke-width="4" stroke-dasharray="8 7" stroke-linecap="round"/>
+        <circle cx="6" cy="100" r="7" fill="#fff"/>
+        <circle cx="130" cy="40" r="7" fill="#138808"/>
+        <circle cx="176" cy="14" r="7" fill="#ff9933"/>
+      </svg>
+    </div>
+
+    <div class="stylebar">
+      <h3>Where to, by travel style</h3>
+      <p class="intro" id="guideIntro"></p>
+      <div class="chips" id="styleChips" role="group" aria-label="Travel style"></div>
+      <div class="row" id="stateRow"></div>
+    </div>
+
+    <div id="sections" class="screen" style="gap:24px"></div>
+
+    <div class="stylebar">
+      <h3>Planning tips</h3>
+      <div class="plan" id="planTips"></div>
+    </div>
+
+    <div class="sources" id="sourceList"></div>
+  </section>
+
+  <!-- MAP -->
+  <section class="screen" data-screen="map" hidden>
+    <div class="seg" role="group" aria-label="Map view">
+      <button class="segbtn" type="button" data-mode="india" aria-pressed="true">All India</button>
+      <button class="segbtn" type="button" data-mode="jaipur" aria-pressed="false">Jaipur</button>
+    </div>
+
+    <div class="map-card">
+      <svg id="mapIndia" viewBox="0 0 395 436" role="img" aria-label="Political map of India. Tap a state to see its places.">
+        <g id="statesG"></g>
+        <g id="labelsG"></g>
+        <polyline class="routeLine" id="rlIndia" points=""/>
+        <g id="pinsIndia"></g>
+        <g id="badgesG"></g>
+      </svg>
+      <svg id="mapJaipur" viewBox="0 0 600 420" role="img" aria-label="Stylised map of Jaipur with pinned places" hidden>
+        <rect x="0" y="0" width="600" height="420" fill="#eef6ee"/>
+        <path class="water" d="M-10 300 C 120 270, 220 330, 340 300 S 520 260, 620 290 L 620 440 L -10 440 Z"/>
+        <path class="road" d="M-10 150 C 150 130, 260 170, 620 120"/>
+        <path class="road" d="M120 -10 C 150 120, 130 260, 170 440"/>
+        <path class="road" d="M330 -10 C 300 120, 360 240, 330 440"/>
+        <path class="road" d="M-10 360 C 200 330, 380 380, 620 350"/>
+        <path class="road thin" d="M-10 60 L 620 90"/>
+        <path class="road thin" d="M480 -10 L 470 440"/>
+        <path class="road thin" d="M30 250 C 200 210, 400 220, 620 200"/>
+        <polyline class="routeLine" id="rlJaipur" points=""/>
+        <g id="pinsJaipur"></g>
+      </svg>
+    </div>
+
+    <div class="legend" id="legend" hidden></div>
+    <p class="note" id="mapNote"></p>
+    <div id="stateCard" class="statecard" hidden></div>
+    <div id="selCard" class="selcard" hidden></div>
+
+    <div class="route-box">
+      <div class="between">
+        <h3 style="font-size:18px">Your route</h3>
+        <button class="btn ghost" id="clearRoute" type="button">Clear</button>
+      </div>
+      <div class="route-stats">
+        <div class="stat"><b id="statStops">0</b><span>stops</span></div>
+        <div class="stat"><b id="statKm">0 km</b><span>straight-line total</span></div>
+        <div class="stat"><b id="statMin">0 min</b><span id="statMinLbl">walking, about 4.5 km/h</span></div>
+      </div>
+      <ol class="steps" id="stepList"></ol>
+    </div>
+  </section>
+
+  <!-- GUIDE -->
+  <section class="screen" data-screen="guide" hidden>
+    <div class="chips" id="guideTabs" role="group" aria-label="Guide tools">
+      <button class="chip" type="button" data-sub="notes" aria-pressed="true">Place notes</button>
+      <button class="chip" type="button" data-sub="ai" aria-pressed="false">AI guide</button>
+      <button class="chip" type="button" data-sub="plan" aria-pressed="false">Plan a trip</button>
+      <button class="chip" type="button" data-sub="ask" aria-pressed="false">Ask</button>
+    </div>
+
+    <div class="screen" data-sub="notes">
+      <select id="guideSelect" aria-label="Choose a place"></select>
+      <div class="out" id="notesOut"></div>
+      <p class="note">Short notes from the sources listed on Explore. Verify timings and prices before you go.</p>
+    </div>
+
+    <div class="card" data-sub="ai" hidden>
+      <h2>Guide me at a place</h2>
+      <p class="intro">Needs internet. Uses the AI behind the app.</p>
+      <label for="place">Place name</label>
+      <input id="place" placeholder="e.g. Hawa Mahal" autocomplete="off" />
+      <label for="city">City <span>(optional)</span></label>
+      <input id="city" placeholder="e.g. Jaipur" autocomplete="off" />
+      <button id="guideBtn" class="primary" type="button">Get guide</button>
+      <div id="guideMeta" class="meta-line"></div>
+      <div id="guideOut" class="output"></div>
+    </div>
+
+    <div class="card" data-sub="plan" hidden>
+      <h2>Plan a trip</h2>
+      <label for="pCity">City</label>
+      <input id="pCity" placeholder="e.g. Jaipur" autocomplete="off" />
+      <div class="grid2">
+        <div><label for="days">Days</label><input id="days" type="number" min="1" max="7" value="2" /></div>
+        <div><label for="budget">Budget</label>
+          <select id="budget"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+      </div>
+      <label for="interests">Interests <span>(comma separated)</span></label>
+      <input id="interests" placeholder="history, food, temples" />
+      <button id="planBtn" class="primary" type="button">Create itinerary</button>
+      <div id="itineraryOut" class="output"></div>
+    </div>
+
+    <div class="card" data-sub="ask" hidden>
+      <h2>Ask a question</h2>
+      <label for="question">Your question</label>
+      <textarea id="question" rows="2" placeholder="Where can I get clean drinking water?"></textarea>
+      <button id="askBtn" class="primary" type="button">Ask</button>
+      <div id="askOut" class="output"></div>
+    </div>
+  </section>
+
+  <!-- PHRASES (offline) -->
+  <section class="screen" data-screen="phrases" hidden>
+    <div>
+      <h2 style="font-size:22px">Show it, don't say it</h2>
+      <p class="muted" style="margin-top:4px">Works offline. Hindi is hand-written; check with a native speaker.</p>
+    </div>
+    <input class="search" type="search" id="phraseSearch" placeholder="Search English or Hindi" aria-label="Search phrases" autocomplete="off" />
+    <div id="phraseList" class="screen" style="gap:10px"></div>
+  </section>
+
+  <!-- SOS (last) -->
+  <section class="screen" data-screen="sos" hidden>
+    <div class="sos-hero">
+      <p class="eyebrow" style="color:#fff;opacity:.9">Emergency</p>
+      <h2>Hold for 2 seconds</h2>
+      <p>Works without internet. Your location is attached, and the report sends once you're back online.</p>
+      <button class="hold" id="hold" type="button" aria-label="Press and hold to send SOS">
+        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="95"/></svg>
+        SOS
+      </button>
+      <p id="sosMsg" style="font-weight:700">Press and hold the button</p>
+      <div class="sosnote">
+        <label for="sosNote">Note for responders (optional)</label>
+        <textarea id="sosNote" rows="2" maxlength="300" placeholder="e.g. Injured knee, near the north gate"></textarea>
+      </div>
+    </div>
+    <div class="calls">
+      <a class="call" href="tel:112"><b>112</b><span>Emergency</span></a>
+      <a class="call" href="tel:100"><b>100</b><span>Police</span></a>
+      <a class="call" href="tel:108"><b>108</b><span>Ambulance</span></a>
+    </div>
+
+    <div class="card">
+      <h2>Emergency contact</h2>
+      <p class="intro">Saved on this phone only. Added to your SOS reports.</p>
+      <form id="contactForm">
+        <label for="cName">Name</label>
+        <input id="cName" autocomplete="off" />
+        <label for="cPhone">Phone</label>
+        <input id="cPhone" type="tel" autocomplete="off" placeholder="+91 …" />
+        <button type="submit" class="primary">Save contact</button>
+      </form>
+      <p id="contactMsg" class="intro"></p>
+    </div>
+
+    <div class="card">
+      <div class="between"><h2>Your reports</h2><button id="sendNow" class="btn ghost" type="button">Send now</button></div>
+      <ul id="queue" class="list"></ul>
+    </div>
+  </section>
+
+</div>
+
+<nav class="tabs" aria-label="Main">
+  <button class="tab on" data-tab="explore"><span class="ico">&#9733;</span>Explore</button>
+  <button class="tab" data-tab="map"><span class="ico">&#9906;</span>Map</button>
+  <button class="tab" data-tab="guide"><span class="ico">&#9654;</span>Guide</button>
+  <button class="tab" data-tab="phrases"><span class="ico">&#9998;</span>Phrases</button>
+  <button class="tab sos-tab" data-tab="sos"><span class="ico">!</span>SOS</button>
+</nav>
+
+<script src="/data/states.js"></script>
+<script src="/data/places.js"></script>
+<script src="/data/regions.js"></script>
+<script src="/phrases.js"></script>
+<script src="/app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
+</script>
+</body>
+</html>
